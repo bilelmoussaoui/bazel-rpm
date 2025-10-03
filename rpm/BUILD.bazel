@@ -1,0 +1,19 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+
+package(default_visibility = ["//visibility:public"])
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    deps = ["//rpm/private:rpm_rule"],
+)
+
+filegroup(
+    name = "standard_package",
+    srcs = [
+        "BUILD.bazel",
+        "defs.bzl",
+        "//rpm/private:standard_package",
+    ],
+    visibility = ["//visibility:public"],
+)

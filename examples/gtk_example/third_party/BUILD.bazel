@@ -1,0 +1,9 @@
+exports_files([
+    "system_gtk4.BUILD",
+    "system_glib2.BUILD",
+    "system_cairo.BUILD",
+    "system_pango.BUILD",
+    "system_gdk_pixbuf.BUILD",
+    "system_harfbuzz.BUILD",
+    "system_graphene.BUILD",
+])

@@ -1,0 +1,27 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+
+package(default_visibility = ["//rpm:__subpackages__"])
+
+bzl_library(
+    name = "rpm_rule",
+    srcs = ["rpm_rule.bzl"],
+    deps = [
+        "@bazel_skylib//lib:paths",
+        "@bazel_skylib//lib:shell",
+    ],
+)
+
+filegroup(
+    name = "standard_package",
+    srcs = [
+        "BUILD.bazel",
+        "rpm_rule.bzl",
+        "//rpm/private/templates:all_templates",
+    ],
+)
+
+filegroup(
+    name = "templates",
+    srcs = glob(["templates/*.tpl"]),
+    visibility = ["//rpm:__subpackages__"],
+)

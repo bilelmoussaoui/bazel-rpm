@@ -1,0 +1,39 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("//rpm:defs.bzl", "rpm_package")
+
+cc_library(
+    name = "libutils",
+    srcs = ["utils.cpp"],
+    hdrs = ["utils.h"],
+)
+
+cc_binary(
+    name = "main_app",
+    srcs = ["main.cpp"],
+    deps = [":libutils"],
+)
+
+cc_binary(
+    name = "helper_tool",
+    srcs = ["helper.cpp"],
+    deps = [":libutils"],
+)
+
+rpm_package(
+    name = "complex_app_rpm",
+    binaries = [
+        ":main_app",
+        ":helper_tool",
+    ],
+    libraries = [":libutils"],
+    configs = [
+        "app.conf",
+        "logging.xml",
+    ],
+    data = ["README.txt"],
+    version = "2.1.0",
+    summary = "Complex application with multiple components",
+    description = "A complex application demonstrating multiple binaries, libraries, and configuration files",
+    config_dir = "/etc/complex_app",
+    data_dir = "/usr/share/complex_app",
+)

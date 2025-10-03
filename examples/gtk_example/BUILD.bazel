@@ -1,0 +1,20 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("//rpm:defs.bzl", "rpm_package")
+
+cc_binary(
+    name = "gtk_app",
+    srcs = ["main.c"],
+    deps = ["@system_gtk4//:gtk4"],
+)
+
+rpm_package(
+    name = "gtk_app_rpm",
+    binaries = [":gtk_app"],
+    version = "1.0.0",
+    summary = "Simple GTK4 application",
+    description = "A simple GTK4 application demonstrating GUI packaging with dependencies",
+    requires = [
+        "gtk4",
+        "glib2",
+    ],
+)
