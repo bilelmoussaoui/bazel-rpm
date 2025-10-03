@@ -1,4 +1,4 @@
-# rules_rpm
+# bazel-rpm
 
 Bazel rules for building RPM packages.
 
