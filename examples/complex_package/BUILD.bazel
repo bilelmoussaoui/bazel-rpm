@@ -2,21 +2,33 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("//rpm:defs.bzl", "rpm_package")
 
 cc_library(
-    name = "libutils",
+    name = "utils",
     srcs = ["utils.cpp"],
     hdrs = ["utils.h"],
+)
+
+cc_library(
+    name = "math",
+    srcs = ["math.cpp"],
+    hdrs = ["math.h"],
 )
 
 cc_binary(
     name = "main_app",
     srcs = ["main.cpp"],
-    deps = [":libutils"],
+    deps = [":utils"],
 )
 
 cc_binary(
     name = "helper_tool",
     srcs = ["helper.cpp"],
-    deps = [":libutils"],
+    deps = [":utils"],
+)
+
+cc_binary(
+    name = "calculator",
+    srcs = ["calculator.cpp"],
+    deps = [":math"],
 )
 
 rpm_package(
@@ -24,8 +36,12 @@ rpm_package(
     binaries = [
         ":main_app",
         ":helper_tool",
+        ":calculator",
     ],
-    libraries = [":libutils"],
+    libraries = [
+        ":utils",
+        ":math",
+    ],
     configs = [
         "app.conf",
         "logging.xml",

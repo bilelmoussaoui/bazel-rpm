@@ -16,6 +16,8 @@ echo "Using temporary staging directory: $TEMP_STAGE"
 
 {STAGE_LIBRARIES}
 
+{STAGE_HEADERS}
+
 {STAGE_CONFIGS}
 
 {STAGE_DATA}

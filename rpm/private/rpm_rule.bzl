@@ -77,6 +77,17 @@ def _generate_files_list(ctx):
     for library in ctx.files.libraries:
         files.append("{}/{}".format(ctx.attr.library_dir, library.basename))
 
+    # Add explicit headers
+    for header in ctx.files.headers:
+        files.append("{}/{}".format(ctx.attr.header_dir, header.basename))
+
+    # Add public headers from cc_library targets in libraries attribute
+    for lib_target in ctx.attr.libraries:
+        if CcInfo in lib_target:
+            cc_info = lib_target[CcInfo]
+            for header in cc_info.compilation_context.direct_public_headers:
+                files.append("{}/{}".format(ctx.attr.header_dir, header.basename))
+
     # Add configs
     for config in ctx.files.configs:
         files.append("{}/{}".format(ctx.attr.config_dir, config.basename))
@@ -112,9 +123,17 @@ def _generate_file_copy_scripts(ctx):
             generated_files.append(copy_script_file)
         return "\n".join(["source {}".format(copy) for copy in copies])
 
+    # Collect all headers (explicit + from cc_library targets)
+    all_headers = list(ctx.files.headers)
+    for lib_target in ctx.attr.libraries:
+        if CcInfo in lib_target:
+            cc_info = lib_target[CcInfo]
+            all_headers.extend(cc_info.compilation_context.direct_public_headers)
+
     return {
         "binaries": _generate_copies(ctx.files.binaries, ctx.attr.binary_dir, "binary"),
         "libraries": _generate_copies(ctx.files.libraries, ctx.attr.library_dir, "library"),
+        "headers": _generate_copies(all_headers, ctx.attr.header_dir, "header"),
         "configs": _generate_copies(ctx.files.configs, ctx.attr.config_dir, "config"),
         "data": _generate_copies(ctx.files.data, ctx.attr.data_dir, "data"),
         "generated_files": generated_files,
@@ -162,6 +181,29 @@ def _stage_files(ctx, buildroot):
         stage_libraries = stage_libraries_file.path
         all_script_files.append(stage_libraries_file)
 
+    stage_headers = ""
+    stage_headers_file = None
+
+    # Collect all headers (explicit + from cc_library targets)
+    all_headers = list(ctx.files.headers)
+    for lib_target in ctx.attr.libraries:
+        if CcInfo in lib_target:
+            cc_info = lib_target[CcInfo]
+            all_headers.extend(cc_info.compilation_context.direct_public_headers)
+
+    if all_headers:
+        stage_headers_file = ctx.actions.declare_file("{}_stage_headers.sh".format(ctx.label.name))
+        ctx.actions.expand_template(
+            template = ctx.file._stage_headers_template,
+            output = stage_headers_file,
+            substitutions = {
+                "{HEADER_DIR}": ctx.attr.header_dir,
+                "{HEADER_COPIES}": copy_scripts["headers"],
+            },
+        )
+        stage_headers = stage_headers_file.path
+        all_script_files.append(stage_headers_file)
+
     stage_configs = ""
     stage_configs_file = None
     if ctx.files.configs:
@@ -199,6 +241,7 @@ def _stage_files(ctx, buildroot):
         substitutions = {
             "{STAGE_BINARIES}": "source {}".format(stage_binaries) if stage_binaries else "# No binaries to stage",
             "{STAGE_LIBRARIES}": "source {}".format(stage_libraries) if stage_libraries else "# No libraries to stage",
+            "{STAGE_HEADERS}": "source {}".format(stage_headers) if stage_headers else "# No headers to stage",
             "{STAGE_CONFIGS}": "source {}".format(stage_configs) if stage_configs else "# No configs to stage",
             "{STAGE_DATA}": "source {}".format(stage_data) if stage_data else "# No data files to stage",
         },
@@ -207,7 +250,7 @@ def _stage_files(ctx, buildroot):
 
     # Run staging script to create tar and extract to buildroot
     ctx.actions.run(
-        inputs = ctx.files.binaries + ctx.files.libraries + ctx.files.configs + ctx.files.data + all_script_files,
+        inputs = ctx.files.binaries + ctx.files.libraries + all_headers + ctx.files.configs + ctx.files.data + all_script_files,
         outputs = [staging_tar, buildroot],
         executable = staging_script,
         arguments = [staging_tar.path, buildroot.path],
@@ -252,6 +295,10 @@ rpm_package = rule(
             allow_files = True,
             doc = "Library files to include in the package",
         ),
+        "headers": attr.label_list(
+            allow_files = True,
+            doc = "Header files to include in the package",
+        ),
         "configs": attr.label_list(
             allow_files = True,
             doc = "Configuration files to include in the package",
@@ -293,6 +340,10 @@ rpm_package = rule(
             default = "/usr/lib64",
             doc = "Directory to install libraries",
         ),
+        "header_dir": attr.string(
+            default = "/usr/include",
+            doc = "Directory to install header files",
+        ),
         "config_dir": attr.string(
             default = "/etc",
             doc = "Directory to install configuration files",
@@ -318,6 +369,10 @@ rpm_package = rule(
         ),
         "_stage_libraries_template": attr.label(
             default = "//rpm/private/templates:stage_libraries.sh.tpl",
+            allow_single_file = True,
+        ),
+        "_stage_headers_template": attr.label(
+            default = "//rpm/private/templates:stage_headers.sh.tpl",
             allow_single_file = True,
         ),
         "_stage_configs_template": attr.label(
