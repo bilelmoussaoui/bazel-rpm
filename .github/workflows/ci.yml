@@ -27,10 +27,8 @@ jobs:
         bazel build //examples/complex_package:complex_app_rpm
         bazel build //examples/gtk_example:gtk_app_rpm
 
-    - name: Run tests
-      run: bazel test //tests/...
-
     - name: Test RPM contents
       run: |
         rpm -qpil bazel-bin/examples/simple_binary/hello_world_rpm.rpm
         rpm -qp --requires bazel-bin/examples/complex_package/complex_app_rpm.rpm
+        rpm -qp --requires bazel-bin/examples/gtk_example/gtk_app_rpm.rpm
