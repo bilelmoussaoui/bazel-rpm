@@ -12,14 +12,6 @@ echo "Target buildroot: $BUILDROOT"
 TEMP_STAGE=$(mktemp -d)
 echo "Using temporary staging directory: $TEMP_STAGE"
 
-{STAGE_BINARIES}
-
-{STAGE_LIBRARIES}
-
-{STAGE_HEADERS}
-
-{STAGE_CONFIGS}
-
 {STAGE_DATA}
 
 echo "Creating tar archive from staged files..."

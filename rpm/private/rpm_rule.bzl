@@ -110,42 +110,60 @@ def _generate_files_list(ctx):
     return "\n".join(files)
 
 def _generate_file_copy_scripts(ctx):
-    """Generate file copy script snippets for different file types."""
-    generated_files = []
-
-    def _generate_copies(files, target_dir, file_type):
-        if not files:
-            return ""
-
-        copies = []
-        for file in files:
-            copy_script_file = ctx.actions.declare_file("{}_{}_copy_{}.sh".format(ctx.label.name, file_type, file.basename))
-            ctx.actions.expand_template(
-                template = ctx.file._copy_file_template,
-                output = copy_script_file,
-                substitutions = {
-                    "{FILE_TYPE}": file_type,
-                    "{SOURCE_PATH}": file.path,
-                    "{TARGET_DIR}": target_dir,
-                    "{BASENAME}": file.basename,
-                },
-            )
-            copies.append(copy_script_file.path)
-            generated_files.append(copy_script_file)
-        return "\n".join(["source {}".format(copy) for copy in copies])
+    """Generate a single consolidated script that handles all file copying."""
 
     # Collect all headers (explicit + transitive from cc_library targets)
     all_headers = list(ctx.files.headers)
     transitive_headers = _collect_transitive_headers(ctx)
     all_headers.extend(transitive_headers)
 
+    # Helper function to generate copy commands for a file type
+    def _generate_copy_section(files, target_dir, file_type):
+        if not files:
+            return "# No {file_type}s to stage".format(file_type=file_type)
+
+        commands = []
+        commands.append("# Stage {file_type} files to {target_dir}".format(file_type=file_type, target_dir=target_dir))
+        commands.append("echo \"Staging {file_type}s to {target_dir}\"".format(file_type=file_type, target_dir=target_dir))
+        commands.append("mkdir -p \"$TEMP_STAGE{target_dir}\"".format(target_dir=target_dir))
+
+        for file in files:
+            commands.append("""echo "Staging {file_type}: {source_path} -> $TEMP_STAGE{target_dir}/{basename}"
+if [ -L "{source_path}" ]; then
+    REAL_FILE=$(readlink -f "{source_path}")
+    echo "Dereferencing symlink: $REAL_FILE"
+    cp "$REAL_FILE" "$TEMP_STAGE{target_dir}/{basename}"
+else
+    cp "{source_path}" "$TEMP_STAGE{target_dir}/{basename}"
+fi""".format(
+                file_type=file_type,
+                source_path=file.path,
+                target_dir=target_dir,
+                basename=file.basename,
+            ))
+
+        return "\n".join(commands)
+
+    # Generate all copy sections
+    copy_sections = []
+    copy_sections.append(_generate_copy_section(ctx.files.binaries, ctx.attr.binary_dir, "binary"))
+    copy_sections.append(_generate_copy_section(ctx.files.libraries, ctx.attr.library_dir, "library"))
+    copy_sections.append(_generate_copy_section(all_headers, ctx.attr.header_dir, "header"))
+    copy_sections.append(_generate_copy_section(ctx.files.configs, ctx.attr.config_dir, "config"))
+    copy_sections.append(_generate_copy_section(ctx.files.data, ctx.attr.data_dir, "data"))
+
+    # Create single consolidated script
+    consolidated_script = ctx.actions.declare_file("{}_copy_all_files.sh".format(ctx.label.name))
+    script_content = "\n\n".join(copy_sections)
+
+    ctx.actions.write(
+        output = consolidated_script,
+        content = script_content,
+    )
+
     return {
-        "binaries": _generate_copies(ctx.files.binaries, ctx.attr.binary_dir, "binary"),
-        "libraries": _generate_copies(ctx.files.libraries, ctx.attr.library_dir, "library"),
-        "headers": _generate_copies(all_headers, ctx.attr.header_dir, "header"),
-        "configs": _generate_copies(ctx.files.configs, ctx.attr.config_dir, "config"),
-        "data": _generate_copies(ctx.files.data, ctx.attr.data_dir, "data"),
-        "generated_files": generated_files,
+        "copy_script": consolidated_script.path,
+        "generated_files": [consolidated_script],
     }
 
 def _stage_files(ctx, buildroot):
@@ -155,105 +173,24 @@ def _stage_files(ctx, buildroot):
     staging_tar = ctx.actions.declare_file("{}_staging.tar".format(ctx.label.name))
     staging_script = ctx.actions.declare_file("{}_stage.sh".format(ctx.label.name))
 
-    # Generate file copy scripts
+    # Generate single consolidated copy script
     copy_scripts = _generate_file_copy_scripts(ctx)
     all_script_files = copy_scripts["generated_files"]
 
-    # Generate staging sections
-    stage_binaries = ""
-    stage_binaries_file = None
-    if ctx.files.binaries:
-        stage_binaries_file = ctx.actions.declare_file("{}_stage_binaries.sh".format(ctx.label.name))
-        ctx.actions.expand_template(
-            template = ctx.file._stage_binaries_template,
-            output = stage_binaries_file,
-            substitutions = {
-                "{BINARY_DIR}": ctx.attr.binary_dir,
-                "{BINARY_COPIES}": copy_scripts["binaries"],
-            },
-        )
-        stage_binaries = stage_binaries_file.path
-        all_script_files.append(stage_binaries_file)
-
-    stage_libraries = ""
-    stage_libraries_file = None
-    if ctx.files.libraries:
-        stage_libraries_file = ctx.actions.declare_file("{}_stage_libraries.sh".format(ctx.label.name))
-        ctx.actions.expand_template(
-            template = ctx.file._stage_libraries_template,
-            output = stage_libraries_file,
-            substitutions = {
-                "{LIBRARY_DIR}": ctx.attr.library_dir,
-                "{LIBRARY_COPIES}": copy_scripts["libraries"],
-            },
-        )
-        stage_libraries = stage_libraries_file.path
-        all_script_files.append(stage_libraries_file)
-
-    stage_headers = ""
-    stage_headers_file = None
-
-    # Collect all headers (explicit + transitive from cc_library targets)
-    all_headers = list(ctx.files.headers)
-    transitive_headers = _collect_transitive_headers(ctx)
-    all_headers.extend(transitive_headers)
-
-    if all_headers:
-        stage_headers_file = ctx.actions.declare_file("{}_stage_headers.sh".format(ctx.label.name))
-        ctx.actions.expand_template(
-            template = ctx.file._stage_headers_template,
-            output = stage_headers_file,
-            substitutions = {
-                "{HEADER_DIR}": ctx.attr.header_dir,
-                "{HEADER_COPIES}": copy_scripts["headers"],
-            },
-        )
-        stage_headers = stage_headers_file.path
-        all_script_files.append(stage_headers_file)
-
-    stage_configs = ""
-    stage_configs_file = None
-    if ctx.files.configs:
-        stage_configs_file = ctx.actions.declare_file("{}_stage_configs.sh".format(ctx.label.name))
-        ctx.actions.expand_template(
-            template = ctx.file._stage_configs_template,
-            output = stage_configs_file,
-            substitutions = {
-                "{CONFIG_DIR}": ctx.attr.config_dir,
-                "{CONFIG_COPIES}": copy_scripts["configs"],
-            },
-        )
-        stage_configs = stage_configs_file.path
-        all_script_files.append(stage_configs_file)
-
-    stage_data = ""
-    stage_data_file = None
-    if ctx.files.data:
-        stage_data_file = ctx.actions.declare_file("{}_stage_data.sh".format(ctx.label.name))
-        ctx.actions.expand_template(
-            template = ctx.file._stage_data_template,
-            output = stage_data_file,
-            substitutions = {
-                "{DATA_DIR}": ctx.attr.data_dir,
-                "{DATA_COPIES}": copy_scripts["data"],
-            },
-        )
-        stage_data = stage_data_file.path
-        all_script_files.append(stage_data_file)
-
-    # Generate main staging script
+    # Generate main staging script using the consolidated copy script
     ctx.actions.expand_template(
         template = ctx.file._stage_files_template,
         output = staging_script,
         substitutions = {
-            "{STAGE_BINARIES}": "source {}".format(stage_binaries) if stage_binaries else "# No binaries to stage",
-            "{STAGE_LIBRARIES}": "source {}".format(stage_libraries) if stage_libraries else "# No libraries to stage",
-            "{STAGE_HEADERS}": "source {}".format(stage_headers) if stage_headers else "# No headers to stage",
-            "{STAGE_CONFIGS}": "source {}".format(stage_configs) if stage_configs else "# No configs to stage",
-            "{STAGE_DATA}": "source {}".format(stage_data) if stage_data else "# No data files to stage",
+            "{STAGE_DATA}": "source {}".format(copy_scripts["copy_script"]),
         },
         is_executable = True,
     )
+
+    # Collect all headers for inputs
+    all_headers = list(ctx.files.headers)
+    transitive_headers = _collect_transitive_headers(ctx)
+    all_headers.extend(transitive_headers)
 
     # Run staging script to create tar and extract to buildroot
     ctx.actions.run(

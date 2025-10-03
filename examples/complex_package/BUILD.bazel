@@ -14,6 +14,12 @@ cc_library(
 )
 
 cc_library(
+    name = "subdir_utils",
+    srcs = ["subdir/utils.cpp"],
+    hdrs = ["subdir/utils.h"],
+)
+
+cc_library(
     name = "math",
     srcs = ["math.cpp"],
     hdrs = ["math.h"],
@@ -47,6 +53,7 @@ rpm_package(
     ],
     libraries = [
         ":utils",
+        ":subdir_utils",
         ":math",
     ],
     configs = [
