@@ -65,6 +65,19 @@ BuildArch: {arch}
         content = spec_content,
     )
 
+def _collect_transitive_headers(ctx):
+    """Collect all transitive headers from cc_library targets."""
+    transitive_headers = []
+
+    for lib_target in ctx.attr.libraries:
+        if CcInfo in lib_target:
+            cc_info = lib_target[CcInfo]
+            # Get all headers from transitive dependencies
+            all_headers = cc_info.compilation_context.headers.to_list()
+            transitive_headers.extend(all_headers)
+
+    return transitive_headers
+
 def _generate_files_list(ctx):
     """Generate %files section for spec file."""
     files = []
@@ -81,12 +94,10 @@ def _generate_files_list(ctx):
     for header in ctx.files.headers:
         files.append("{}/{}".format(ctx.attr.header_dir, header.basename))
 
-    # Add public headers from cc_library targets in libraries attribute
-    for lib_target in ctx.attr.libraries:
-        if CcInfo in lib_target:
-            cc_info = lib_target[CcInfo]
-            for header in cc_info.compilation_context.direct_public_headers:
-                files.append("{}/{}".format(ctx.attr.header_dir, header.basename))
+    # Add transitive headers from cc_library targets in libraries attribute
+    transitive_headers = _collect_transitive_headers(ctx)
+    for header in transitive_headers:
+        files.append("{}/{}".format(ctx.attr.header_dir, header.basename))
 
     # Add configs
     for config in ctx.files.configs:
@@ -123,12 +134,10 @@ def _generate_file_copy_scripts(ctx):
             generated_files.append(copy_script_file)
         return "\n".join(["source {}".format(copy) for copy in copies])
 
-    # Collect all headers (explicit + from cc_library targets)
+    # Collect all headers (explicit + transitive from cc_library targets)
     all_headers = list(ctx.files.headers)
-    for lib_target in ctx.attr.libraries:
-        if CcInfo in lib_target:
-            cc_info = lib_target[CcInfo]
-            all_headers.extend(cc_info.compilation_context.direct_public_headers)
+    transitive_headers = _collect_transitive_headers(ctx)
+    all_headers.extend(transitive_headers)
 
     return {
         "binaries": _generate_copies(ctx.files.binaries, ctx.attr.binary_dir, "binary"),
@@ -184,12 +193,10 @@ def _stage_files(ctx, buildroot):
     stage_headers = ""
     stage_headers_file = None
 
-    # Collect all headers (explicit + from cc_library targets)
+    # Collect all headers (explicit + transitive from cc_library targets)
     all_headers = list(ctx.files.headers)
-    for lib_target in ctx.attr.libraries:
-        if CcInfo in lib_target:
-            cc_info = lib_target[CcInfo]
-            all_headers.extend(cc_info.compilation_context.direct_public_headers)
+    transitive_headers = _collect_transitive_headers(ctx)
+    all_headers.extend(transitive_headers)
 
     if all_headers:
         stage_headers_file = ctx.actions.declare_file("{}_stage_headers.sh".format(ctx.label.name))

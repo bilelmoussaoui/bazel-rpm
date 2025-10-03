@@ -2,6 +2,12 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("//rpm:defs.bzl", "rpm_package")
 
 cc_library(
+    name = "base",
+    srcs = ["base.cpp"],
+    hdrs = ["base.h"],
+)
+
+cc_library(
     name = "utils",
     srcs = ["utils.cpp"],
     hdrs = ["utils.h"],
@@ -11,6 +17,7 @@ cc_library(
     name = "math",
     srcs = ["math.cpp"],
     hdrs = ["math.h"],
+    deps = [":base"],  # math depends on base
 )
 
 cc_binary(
