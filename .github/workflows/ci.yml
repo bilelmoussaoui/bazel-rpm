@@ -7,6 +7,31 @@ on:
     branches: [ main ]
 
 jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install buildifier
+      run: |
+        curl -L https://github.com/bazelbuild/buildtools/releases/latest/download/buildifier-linux-amd64 -o buildifier
+        chmod +x buildifier
+        sudo mv buildifier /usr/local/bin/
+
+    - name: Check Bazel/Starlark formatting
+      run: |
+        echo "Checking BUILD.bazel and .bzl file formatting..."
+        # Find all Bazel/Starlark files (excluding bazel- output directories)
+        FILES=$(find . -name "BUILD.bazel" -o -name "*.bzl" | grep -v bazel-)
+
+        # Check if files are properly formatted
+        if ! buildifier --lint=warn --mode=check $FILES; then
+          echo "❌ Formatting issues found! Run the following to fix:"
+          echo "buildifier --lint=fix $FILES"
+          exit 1
+        fi
+        echo "✅ All Bazel/Starlark files are properly formatted"
+
   test:
     runs-on: ubuntu-latest
     container: fedora:latest
@@ -25,6 +50,7 @@ jobs:
       run: |
         bazel build //examples/simple_binary:hello_world_rpm
         bazel build //examples/complex_package:complex_app_rpm
+        bazel build //examples/complex_package:complex_app_rpm_with_transitive
         bazel build //examples/gtk_example:gtk_app_rpm
 
     - name: Test RPM contents
