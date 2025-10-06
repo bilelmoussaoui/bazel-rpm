@@ -1,0 +1,15 @@
+{
+    "homepage": "https://github.com/{OWNER}/{REPO}",
+    "maintainers": [
+        {
+            "email": "belmouss@redhat.com",
+            "github": "bilelmoussaoui",
+            "name": "Bilal Elmoussaoui"
+        }
+    ],
+    "repository": [
+        "github:{OWNER}/{REPO}"
+    ],
+    "versions": ["{VERSION}"],
+    "yanked_versions": {}
+}
