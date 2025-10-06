@@ -52,21 +52,21 @@ rpm_package(
         ":helper_tool",
         ":calculator",
     ],
-    libraries = [
-        ":utils",
-        ":subdir_utils",
-        ":math",
-    ],
+    config_dir = "/etc/complex_app",
     configs = [
         "app.conf",
         "logging.xml",
     ],
     data = ["README.txt"],
-    version = "2.1.0",
-    summary = "Complex application with multiple components",
-    description = "A complex application demonstrating multiple binaries, libraries, and configuration files",
-    config_dir = "/etc/complex_app",
     data_dir = "/usr/share/complex_app",
+    description = "A complex application demonstrating multiple binaries, libraries, and configuration files",
+    libraries = [
+        ":utils",
+        ":subdir_utils",
+        ":math",
+    ],
+    summary = "Complex application with multiple components",
+    version = "2.1.0",
     # include_transitive_headers = False,  # Default - only direct headers
 )
 
@@ -78,20 +78,20 @@ rpm_package(
         ":helper_tool",
         ":calculator",
     ],
-    libraries = [
-        ":utils",
-        ":subdir_utils",
-        ":math",
-    ],
+    config_dir = "/etc/complex_app",
     configs = [
         "app.conf",
         "logging.xml",
     ],
     data = ["README.txt"],
-    version = "2.1.0",
-    summary = "Complex application with multiple components (with transitive headers)",
-    description = "A complex application demonstrating transitive header inclusion",
-    config_dir = "/etc/complex_app",
     data_dir = "/usr/share/complex_app",
+    description = "A complex application demonstrating transitive header inclusion",
     include_transitive_headers = True,  # Include all transitive headers
+    libraries = [
+        ":utils",
+        ":subdir_utils",
+        ":math",
+    ],
+    summary = "Complex application with multiple components (with transitive headers)",
+    version = "2.1.0",
 )

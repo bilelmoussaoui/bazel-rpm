@@ -1,7 +1,6 @@
 """Implementation of rpm_package rule."""
 
-load("@bazel_skylib//lib:paths.bzl", "paths")
-load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 
 def _rpm_package_impl(ctx):
     """Implementation function for rpm_package rule."""
@@ -75,6 +74,7 @@ def _collect_transitive_headers(ctx):
     for lib_target in ctx.attr.libraries:
         if CcInfo in lib_target:
             cc_info = lib_target[CcInfo]
+
             # Get all headers from transitive dependencies
             all_headers = cc_info.compilation_context.headers.to_list()
             transitive_headers.extend(all_headers)
@@ -88,6 +88,7 @@ def _collect_direct_headers(ctx):
     for lib_target in ctx.attr.libraries:
         if CcInfo in lib_target:
             cc_info = lib_target[CcInfo]
+
             # Get only direct headers (not transitive)
             for header in cc_info.compilation_context.direct_headers:
                 if header.basename not in seen_basenames:
@@ -141,12 +142,12 @@ def _generate_file_copy_scripts(ctx):
     # Helper function to generate copy commands for a file type
     def _generate_copy_section(files, target_dir, file_type):
         if not files:
-            return "# No {file_type}s to stage".format(file_type=file_type)
+            return "# No {file_type}s to stage".format(file_type = file_type)
 
         commands = []
-        commands.append("# Stage {file_type} files to {target_dir}".format(file_type=file_type, target_dir=target_dir))
-        commands.append("echo \"Staging {file_type}s to {target_dir}\"".format(file_type=file_type, target_dir=target_dir))
-        commands.append("mkdir -p \"$TEMP_STAGE{target_dir}\"".format(target_dir=target_dir))
+        commands.append("# Stage {file_type} files to {target_dir}".format(file_type = file_type, target_dir = target_dir))
+        commands.append("echo \"Staging {file_type}s to {target_dir}\"".format(file_type = file_type, target_dir = target_dir))
+        commands.append("mkdir -p \"$TEMP_STAGE{target_dir}\"".format(target_dir = target_dir))
 
         for file in files:
             commands.append("""echo "Staging {file_type}: {source_path} -> $TEMP_STAGE{target_dir}/{basename}"
@@ -157,10 +158,10 @@ if [ -L "{source_path}" ]; then
 else
     cp "{source_path}" "$TEMP_STAGE{target_dir}/{basename}"
 fi""".format(
-                file_type=file_type,
-                source_path=file.path,
-                target_dir=target_dir,
-                basename=file.basename,
+                file_type = file_type,
+                source_path = file.path,
+                target_dir = target_dir,
+                basename = file.basename,
             ))
 
         return "\n".join(commands)

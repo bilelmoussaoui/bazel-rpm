@@ -9,7 +9,7 @@ cc_binary(
 rpm_package(
     name = "hello_world_rpm",
     binaries = [":hello_world"],
-    version = "1.0.0",
-    summary = "Simple Hello World application",
     description = "A simple Hello World application packaged as RPM",
+    summary = "Simple Hello World application",
+    version = "1.0.0",
 )

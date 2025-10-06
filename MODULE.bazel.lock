@@ -138,7 +138,7 @@
   "moduleExtensions": {
     "//toolchains:extensions.bzl%rpm_toolchain": {
       "general": {
-        "bzlTransitiveDigest": "tiKwTYbuzCtw+PZ8FoHHYUrtyhnceN867786oUIZ7vo=",
+        "bzlTransitiveDigest": "4axSr+IAwvNLX0sSJL1e52R1IPpUd0T30ZokYyn8ad8=",
         "usagesDigest": "alnVGYIYdpxlVzb7Pjt1oE7Jzu0qVHmAaHT52JTmfik=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

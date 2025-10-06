@@ -10,11 +10,11 @@ cc_binary(
 rpm_package(
     name = "gtk_app_rpm",
     binaries = [":gtk_app"],
-    version = "1.0.0",
-    summary = "Simple GTK4 application",
     description = "A simple GTK4 application demonstrating GUI packaging with dependencies",
     requires = [
         "gtk4",
         "glib2",
     ],
+    summary = "Simple GTK4 application",
+    version = "1.0.0",
 )
