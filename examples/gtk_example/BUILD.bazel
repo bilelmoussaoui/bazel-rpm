@@ -1,5 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary")
-load("//rpm:defs.bzl", "rpm_package")
+load("@rules_rpm//rpm:defs.bzl", "rpm_package")
 
 cc_binary(
     name = "gtk_app",
