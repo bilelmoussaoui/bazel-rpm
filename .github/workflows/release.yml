@@ -14,11 +14,8 @@ jobs:
     with:
       tag_name: ${{ inputs.tag_name }}
       bazel_test_command: bazel build //examples/simple_binary/... //examples/complex_package/... //rpm/... //toolchains/...
-      release_files: |
-        MODULE.bazel
-        metadata.json
-        presubmit.yml
-        .bcr/**
+      release_files: rules_rpm-*.tar.gz
+      prerelease: false
     permissions:
       contents: write
       id-token: write
