@@ -12,6 +12,11 @@ rpm_toolchain(
     rpmbuild = "@rpm_toolchain//:rpmbuild",
 )
 
+rpm_toolchain(
+    name = "linux_aarch64_toolchain",
+    rpmbuild = "@rpm_toolchain//:rpmbuild",
+)
+
 toolchain(
     name = "linux_x86_64",
     exec_compatible_with = [
@@ -23,5 +28,19 @@ toolchain(
         "@platforms//cpu:x86_64",
     ],
     toolchain = ":linux_x86_64_toolchain",
+    toolchain_type = ":rpm_toolchain_type",
+)
+
+toolchain(
+    name = "linux_aarch64",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+    toolchain = ":linux_aarch64_toolchain",
     toolchain_type = ":rpm_toolchain_type",
 )
