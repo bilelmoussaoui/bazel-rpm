@@ -1,5 +1,5 @@
 {
-    "homepage": "https://github.com/{OWNER}/{REPO}",
+    "homepage": "https://github.com/bilelmoussaoui/bazel-rpm",
     "maintainers": [
         {
             "email": "belmouss@redhat.com",
@@ -8,7 +8,7 @@
         }
     ],
     "repository": [
-        "github:{OWNER}/{REPO}"
+        "github:bilelmoussaoui/bazel-rpm"
     ],
     "versions": ["{VERSION}"],
     "yanked_versions": {}

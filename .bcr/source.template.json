@@ -1,5 +1,5 @@
 {
     "integrity": "sha256-{ARCHIVE_SHA256}",
     "strip_prefix": "rules_rpm-{VERSION}",
-    "url": "https://github.com/{OWNER}/{REPO}/releases/download/v{VERSION}/rules_rpm-v{VERSION}.tar.gz"
+    "url": "https://github.com/bilelmoussaoui/bazel-rpm/releases/download/v{VERSION}/rules_rpm-v{VERSION}.tar.gz"
 }
