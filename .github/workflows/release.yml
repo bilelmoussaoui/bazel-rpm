@@ -13,7 +13,11 @@ jobs:
     uses: bazel-contrib/.github/.github/workflows/release_ruleset.yaml@v7.2.3
     with:
       tag_name: ${{ inputs.tag_name }}
-      attest: true
+      release_files: |
+        MODULE.bazel
+        metadata.json
+        presubmit.yml
+        .bcr/**
     permissions:
       contents: write
       id-token: write
