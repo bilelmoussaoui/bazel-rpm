@@ -6,7 +6,14 @@ def _rpm_package_impl(ctx):
     """Implementation function for rpm_package rule."""
 
     # Declare output files
-    rpm_file = ctx.actions.declare_file("{}.rpm".format(ctx.label.name))
+    package_name = ctx.attr.package_name or ctx.label.name
+    rpm_filename = "{}-{}-{}.{}.rpm".format(
+        package_name,
+        ctx.attr.version,
+        ctx.attr.release,
+        ctx.attr.architecture,
+    )
+    rpm_file = ctx.actions.declare_file(rpm_filename)
     spec_file = ctx.actions.declare_file("{}.spec".format(ctx.label.name))
     buildroot = ctx.actions.declare_directory("{}_buildroot".format(ctx.label.name))
 
@@ -50,10 +57,11 @@ BuildArch: {arch}
 {description}
 
 %files
+%defattr(644,-,-,755)
 {files_list}
 
 %changelog
-* Mon Jan 01 2024 {packager}
+* Mon Jan 01 2024 {packager} - {version}-{release}
 - Initial package
 """.format(
         name = ctx.attr.package_name or ctx.label.name,
@@ -122,24 +130,29 @@ def _generate_files_list(ctx):
     """Generate %files section for spec file."""
     files = []
 
-    # Add binaries
+    # Add binaries with executable permissions
     for binary in ctx.files.binaries:
-        files.append("{}/{}".format(ctx.attr.binary_dir, binary.basename))
+        files.append("%attr(755,-,-) {}/{}".format(ctx.attr.binary_dir, binary.basename))
 
-    # Add libraries
+    # Add libraries with appropriate permissions
     for library in ctx.files.libraries:
-        files.append("{}/{}".format(ctx.attr.library_dir, library.basename))
+        if library.basename.endswith(".so"):
+            # Shared libraries need executable permissions
+            files.append("%attr(755,-,-) {}/{}".format(ctx.attr.library_dir, library.basename))
+        else:
+            # Static libraries keep default permissions
+            files.append("{}/{}".format(ctx.attr.library_dir, library.basename))
 
-    # Add all headers (explicit + from cc_library targets)
+    # Add all headers (keep default permissions)
     all_headers = _collect_cc_headers(ctx)
     for header in all_headers:
         files.append("{}/{}".format(ctx.attr.header_dir, header.basename))
 
-    # Add configs
+    # Add configs (mark as configuration files with noreplace)
     for config in ctx.files.configs:
-        files.append("{}/{}".format(ctx.attr.config_dir, config.basename))
+        files.append("%config(noreplace) {}/{}".format(ctx.attr.config_dir, config.basename))
 
-    # Add data files
+    # Add data files (keep default permissions)
     for data_file in ctx.files.data:
         files.append("{}/{}".format(ctx.attr.data_dir, data_file.basename))
 

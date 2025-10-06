@@ -11,5 +11,6 @@ rpm_package(
     binaries = [":hello_world"],
     description = "A simple Hello World application packaged as RPM",
     summary = "Simple Hello World application",
+    url = "https://github.com/example/hello-world",
     version = "1.0.0",
 )
