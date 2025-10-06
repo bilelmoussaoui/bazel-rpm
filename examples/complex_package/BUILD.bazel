@@ -60,12 +60,16 @@ rpm_package(
     data = ["README.txt"],
     data_dir = "/usr/share/complex_app",
     description = "A complex application demonstrating multiple binaries, libraries, and configuration files",
+    group = "Development/Tools",
     libraries = [
         ":utils",
         ":subdir_utils",
         ":math",
     ],
+    packager = "Example Corp <maintainer@example.com>",
     summary = "Complex application with multiple components",
+    url = "https://github.com/example/complex-app",
+    vendor = "Example Corporation",
     version = "2.1.0",
     # include_transitive_headers = False,  # Default - only direct headers
 )

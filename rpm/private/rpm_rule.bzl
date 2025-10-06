@@ -29,12 +29,20 @@ def _generate_spec_file(ctx, spec_file):
     if ctx.attr.requires:
         requires_section = "\n".join(["Requires: {}".format(req) for req in ctx.attr.requires])
 
+    # Generate optional metadata sections
+    vendor_line = "Vendor: {}".format(ctx.attr.vendor) if ctx.attr.vendor else ""
+    url_line = "URL: {}".format(ctx.attr.url) if ctx.attr.url else ""
+
     # Basic spec file template
     spec_content = """Name: {name}
 Version: {version}
 Release: {release}
 Summary: {summary}
 License: {license}
+Group: {group}
+{vendor}
+Packager: {packager}
+{url}
 BuildArch: {arch}
 {requires}
 
@@ -45,7 +53,7 @@ BuildArch: {arch}
 {files_list}
 
 %changelog
-* Mon Jan 01 2024 Bazel <bazel@example.com>
+* Mon Jan 01 2024 {packager}
 - Initial package
 """.format(
         name = ctx.attr.package_name or ctx.label.name,
@@ -53,6 +61,10 @@ BuildArch: {arch}
         release = ctx.attr.release,
         summary = ctx.attr.summary or "Package built with Bazel",
         license = ctx.attr.license,
+        group = ctx.attr.group,
+        vendor = vendor_line,
+        packager = ctx.attr.packager,
+        url = url_line,
         arch = ctx.attr.architecture,
         requires = requires_section,
         description = ctx.attr.description or "Package built with Bazel rules_rpm",
@@ -322,6 +334,22 @@ rpm_package = rule(
         "include_transitive_headers": attr.bool(
             default = False,
             doc = "Include transitive headers from cc_library dependencies. Set to False to include only direct headers (recommended for most use cases).",
+        ),
+        "group": attr.string(
+            default = "Applications/System",
+            doc = "RPM package group/category",
+        ),
+        "vendor": attr.string(
+            default = "",
+            doc = "Package vendor/organization (optional)",
+        ),
+        "packager": attr.string(
+            default = "Bazel <bazel@example.com>",
+            doc = "Package maintainer",
+        ),
+        "url": attr.string(
+            default = "",
+            doc = "Project homepage URL (optional)",
         ),
         "_copy_file_template": attr.label(
             default = "//rpm/private/templates:copy_file.sh.tpl",
