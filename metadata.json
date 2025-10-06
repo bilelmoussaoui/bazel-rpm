@@ -1,0 +1,17 @@
+{
+  "homepage": "https://github.com/bilelmoussaoui/bazel-rpm",
+  "maintainers": [
+    {
+      "email": "belmouss@redhat.com",
+      "github": "bilelmoussaoui",
+      "name": "Bilal Elmoussaoui"
+    }
+  ],
+  "repository": [
+    "github:bilelmoussaoui/bazel-rpm"
+  ],
+  "versions": [
+    "0.1.0"
+  ],
+  "yanked_versions": {}
+}
