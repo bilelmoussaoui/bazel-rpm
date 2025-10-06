@@ -44,6 +44,7 @@ cc_binary(
     deps = [":math"],
 )
 
+# Example with transitive headers disabled (default - recommended)
 rpm_package(
     name = "complex_app_rpm",
     binaries = [
@@ -66,4 +67,31 @@ rpm_package(
     description = "A complex application demonstrating multiple binaries, libraries, and configuration files",
     config_dir = "/etc/complex_app",
     data_dir = "/usr/share/complex_app",
+    # include_transitive_headers = False,  # Default - only direct headers
+)
+
+# Example with transitive headers enabled (for comparison)
+rpm_package(
+    name = "complex_app_rpm_with_transitive",
+    binaries = [
+        ":main_app",
+        ":helper_tool",
+        ":calculator",
+    ],
+    libraries = [
+        ":utils",
+        ":subdir_utils",
+        ":math",
+    ],
+    configs = [
+        "app.conf",
+        "logging.xml",
+    ],
+    data = ["README.txt"],
+    version = "2.1.0",
+    summary = "Complex application with multiple components (with transitive headers)",
+    description = "A complex application demonstrating transitive header inclusion",
+    config_dir = "/etc/complex_app",
+    data_dir = "/usr/share/complex_app",
+    include_transitive_headers = True,  # Include all transitive headers
 )

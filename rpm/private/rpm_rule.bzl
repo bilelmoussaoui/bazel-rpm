@@ -66,7 +66,10 @@ BuildArch: {arch}
     )
 
 def _collect_transitive_headers(ctx):
-    """Collect all transitive headers from cc_library targets."""
+    """Collect headers from cc_library targets based on inclusion policy."""
+    if not ctx.attr.include_transitive_headers:
+        return []
+
     transitive_headers = []
 
     for lib_target in ctx.attr.libraries:
@@ -77,6 +80,30 @@ def _collect_transitive_headers(ctx):
             transitive_headers.extend(all_headers)
 
     return transitive_headers
+
+def _collect_direct_headers(ctx):
+    """Collect only direct headers from cc_library targets."""
+    direct_headers = []
+    seen_basenames = {}
+    for lib_target in ctx.attr.libraries:
+        if CcInfo in lib_target:
+            cc_info = lib_target[CcInfo]
+            # Get only direct headers (not transitive)
+            for header in cc_info.compilation_context.direct_headers:
+                if header.basename not in seen_basenames:
+                    seen_basenames[header.basename] = True
+                    direct_headers.append(header)
+    return direct_headers
+
+def _collect_cc_headers(ctx):
+    """Collect all headers: explicit headers + cc_library headers."""
+    all_headers = list(ctx.files.headers)
+    if ctx.attr.include_transitive_headers:
+        cc_headers = _collect_transitive_headers(ctx)
+    else:
+        cc_headers = _collect_direct_headers(ctx)
+    all_headers.extend(cc_headers)
+    return all_headers
 
 def _generate_files_list(ctx):
     """Generate %files section for spec file."""
@@ -90,13 +117,9 @@ def _generate_files_list(ctx):
     for library in ctx.files.libraries:
         files.append("{}/{}".format(ctx.attr.library_dir, library.basename))
 
-    # Add explicit headers
-    for header in ctx.files.headers:
-        files.append("{}/{}".format(ctx.attr.header_dir, header.basename))
-
-    # Add transitive headers from cc_library targets in libraries attribute
-    transitive_headers = _collect_transitive_headers(ctx)
-    for header in transitive_headers:
+    # Add all headers (explicit + from cc_library targets)
+    all_headers = _collect_cc_headers(ctx)
+    for header in all_headers:
         files.append("{}/{}".format(ctx.attr.header_dir, header.basename))
 
     # Add configs
@@ -112,10 +135,8 @@ def _generate_files_list(ctx):
 def _generate_file_copy_scripts(ctx):
     """Generate a single consolidated script that handles all file copying."""
 
-    # Collect all headers (explicit + transitive from cc_library targets)
-    all_headers = list(ctx.files.headers)
-    transitive_headers = _collect_transitive_headers(ctx)
-    all_headers.extend(transitive_headers)
+    # Collect all headers (explicit + from cc_library targets)
+    all_headers = _collect_cc_headers(ctx)
 
     # Helper function to generate copy commands for a file type
     def _generate_copy_section(files, target_dir, file_type):
@@ -188,9 +209,7 @@ def _stage_files(ctx, buildroot):
     )
 
     # Collect all headers for inputs
-    all_headers = list(ctx.files.headers)
-    transitive_headers = _collect_transitive_headers(ctx)
-    all_headers.extend(transitive_headers)
+    all_headers = _collect_cc_headers(ctx)
 
     # Run staging script to create tar and extract to buildroot
     ctx.actions.run(
@@ -298,6 +317,10 @@ rpm_package = rule(
         ),
         "requires": attr.string_list(
             doc = "List of RPM package dependencies",
+        ),
+        "include_transitive_headers": attr.bool(
+            default = False,
+            doc = "Include transitive headers from cc_library dependencies. Set to False to include only direct headers (recommended for most use cases).",
         ),
         "_copy_file_template": attr.label(
             default = "//rpm/private/templates:copy_file.sh.tpl",
