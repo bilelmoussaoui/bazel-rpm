@@ -76,8 +76,9 @@ jobs:
     - name: Test GTK example
       run: |
         echo "=== Building GTK example RPM ==="
-        bazel build //examples/gtk_example:gtk_app_rpm
+        cd examples/gtk_example
+        bazel build //:gtk_app_rpm
         echo "=== Testing RPM contents ==="
-        rpm -qp --requires bazel-bin/examples/gtk_example/gtk_app_rpm-1.0.0-1.x86_64.rpm
+        rpm -qp --requires bazel-bin/gtk_app_rpm-1.0.0-1.x86_64.rpm
         echo "=== Running rpmlint ==="
-        rpmlint bazel-bin/examples/gtk_example/gtk_app_rpm-1.0.0-1.x86_64.rpm
+        rpmlint bazel-bin/gtk_app_rpm-1.0.0-1.x86_64.rpm
