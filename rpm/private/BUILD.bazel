@@ -22,6 +22,6 @@ filegroup(
 
 filegroup(
     name = "templates",
-    srcs = glob(["templates/*.tpl"]),
+    srcs = ["//rpm/private/templates:all_templates"],
     visibility = ["//rpm:__subpackages__"],
 )
