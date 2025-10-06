@@ -5,24 +5,28 @@ cc_library(
     name = "base",
     srcs = ["base.cpp"],
     hdrs = ["base.h"],
+    copts = ["-g"],  # Add debug info for RPM packaging
 )
 
 cc_library(
     name = "utils",
     srcs = ["utils.cpp"],
     hdrs = ["utils.h"],
+    copts = ["-g"],  # Add debug info for RPM packaging
 )
 
 cc_library(
     name = "subdir_utils",
     srcs = ["subdir/utils.cpp"],
     hdrs = ["subdir/utils.h"],
+    copts = ["-g"],  # Add debug info for RPM packaging
 )
 
 cc_library(
     name = "math",
     srcs = ["math.cpp"],
     hdrs = ["math.h"],
+    copts = ["-g"],  # Add debug info for RPM packaging
     deps = [":base"],  # math depends on base
 )
 
@@ -45,6 +49,8 @@ cc_binary(
 )
 
 # Example with transitive headers disabled (default - recommended)
+# Note: cc_library targets use copts = ["-g"] to generate debug info
+# This prevents "static-library-without-debuginfo" rpmlint errors
 rpm_package(
     name = "complex_app_rpm",
     binaries = [
@@ -59,7 +65,7 @@ rpm_package(
     ],
     data = ["README.txt"],
     data_dir = "/usr/share/complex_app",
-    description = "A complex application demonstrating multiple binaries, libraries, and configuration files",
+    description = "Complex application with multiple components and libraries",
     group = "Development/Tools",
     libraries = [
         ":utils",
@@ -89,7 +95,7 @@ rpm_package(
     ],
     data = ["README.txt"],
     data_dir = "/usr/share/complex_app",
-    description = "A complex application demonstrating transitive header inclusion",
+    description = "Complex application demonstrating transitive header inclusion",
     include_transitive_headers = True,  # Include all transitive headers
     libraries = [
         ":utils",
@@ -97,5 +103,6 @@ rpm_package(
         ":math",
     ],
     summary = "Complex application with multiple components (with transitive headers)",
+    url = "https://github.com/example/complex-app",
     version = "2.1.0",
 )

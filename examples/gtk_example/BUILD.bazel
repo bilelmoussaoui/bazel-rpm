@@ -13,8 +13,8 @@ rpm_package(
     description = "A simple GTK4 application demonstrating GUI packaging with dependencies",
     requires = [
         "gtk4",
-        "glib2",
     ],
     summary = "Simple GTK4 application",
+    url = "https://github.com/example/gtk-app",
     version = "1.0.0",
 )
