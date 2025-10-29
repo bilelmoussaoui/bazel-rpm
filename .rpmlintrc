@@ -1,8 +1,5 @@
 # rpmlint filters for pre-built Bazel binaries/libraries
 
-# Ignore warnings about unused filters (not all examples trigger all filters)
-addFilter("unused-rpmlintrc-filter")
-
 # Pre-built artifacts don't include debuginfo
 addFilter("static-library-without-debuginfo")
 
