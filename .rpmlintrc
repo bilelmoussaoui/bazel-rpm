@@ -1,0 +1,20 @@
+# rpmlint filters for pre-built Bazel binaries/libraries
+
+# Pre-built artifacts don't include debuginfo
+addFilter("static-library-without-debuginfo")
+
+# Bazel binaries are not stripped by default
+addFilter("unstripped-binary-or-object")
+
+# PIE is controlled by Bazel build flags
+addFilter("position-independent-executable-suggested")
+
+# Bazel shared libraries don't include soname by default
+addFilter("no-soname")
+
+# Example packages don't need manual pages or documentation
+addFilter("no-manual-page-for-binary")
+addFilter("no-documentation")
+
+# Dev files in main package for simplicity (should be -devel in production)
+addFilter("devel-file-in-non-devel-package")

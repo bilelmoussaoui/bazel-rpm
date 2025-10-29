@@ -53,7 +53,7 @@ jobs:
         echo "=== Testing RPM contents ==="
         rpm -qpil bazel-bin/examples/simple_binary/hello_world_rpm-1.0.0-1.x86_64.rpm
         echo "=== Running rpmlint ==="
-        rpmlint bazel-bin/examples/simple_binary/hello_world_rpm-1.0.0-1.x86_64.rpm
+        rpmlint -f .rpmlintrc bazel-bin/examples/simple_binary/hello_world_rpm-1.0.0-1.x86_64.rpm
 
     - name: Test complex package example (direct headers)
       run: |
@@ -62,7 +62,7 @@ jobs:
         echo "=== Testing RPM contents ==="
         rpm -qp --requires bazel-bin/examples/complex_package/complex_app_rpm-2.1.0-1.x86_64.rpm
         echo "=== Running rpmlint ==="
-        rpmlint bazel-bin/examples/complex_package/complex_app_rpm-2.1.0-1.x86_64.rpm
+        rpmlint -f .rpmlintrc bazel-bin/examples/complex_package/complex_app_rpm-2.1.0-1.x86_64.rpm
 
     - name: Test complex package example (transitive headers)
       run: |
@@ -71,7 +71,7 @@ jobs:
         echo "=== Testing RPM contents ==="
         rpm -qp --requires bazel-bin/examples/complex_package/complex_app_rpm_with_transitive-2.1.0-1.x86_64.rpm
         echo "=== Running rpmlint ==="
-        rpmlint bazel-bin/examples/complex_package/complex_app_rpm_with_transitive-2.1.0-1.x86_64.rpm
+        rpmlint -f .rpmlintrc bazel-bin/examples/complex_package/complex_app_rpm_with_transitive-2.1.0-1.x86_64.rpm
 
     - name: Test GTK example
       run: |
@@ -81,4 +81,4 @@ jobs:
         echo "=== Testing RPM contents ==="
         rpm -qp --requires bazel-bin/gtk_app_rpm-1.0.0-1.x86_64.rpm
         echo "=== Running rpmlint ==="
-        rpmlint bazel-bin/gtk_app_rpm-1.0.0-1.x86_64.rpm
+        rpmlint -f ../../.rpmlintrc bazel-bin/gtk_app_rpm-1.0.0-1.x86_64.rpm
