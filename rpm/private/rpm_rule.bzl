@@ -68,8 +68,21 @@ Source0: {source}
 BuildArch: {arch}
 {requires}
 
+# Disable debuginfo package generation since we're packaging pre-built binaries
+%global debug_package %{{nil}}
+
 %description
 {description}
+
+%prep
+# Extract source tarball
+%setup -c -n %{{name}}-%{{version}}
+
+%install
+# Install files from extracted tarball to buildroot
+rm -rf %{{buildroot}}
+mkdir -p %{{buildroot}}
+cp -a * %{{buildroot}}/
 
 %files
 %defattr(644,-,-,755)
