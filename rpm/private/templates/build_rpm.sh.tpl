@@ -4,12 +4,16 @@ set -x
 
 SPEC_FILE="{SPEC_FILE}"
 SOURCE_BUILDROOT="$(pwd)/{BUILDROOT_PATH}"
+TARBALL_PATH="$(pwd)/{TARBALL_PATH}"
 RPM_OUTPUT="{RPM_OUTPUT}"
+SRPM_OUTPUT="{SRPM_OUTPUT}"
 
-echo "Building RPM with isolated /tmp buildroot:"
+echo "Building RPM and SRPM with isolated /tmp buildroot:"
 echo "  Spec file: $SPEC_FILE"
 echo "  Source buildroot: $SOURCE_BUILDROOT"
-echo "  Output: $RPM_OUTPUT"
+echo "  Source tarball: $TARBALL_PATH"
+echo "  RPM output: $RPM_OUTPUT"
+echo "  SRPM output: $SRPM_OUTPUT"
 
 # Create isolated directories in /tmp
 WORK_DIR=$(mktemp -d -t rpm_build_XXXXXX)
@@ -34,13 +38,14 @@ else
     echo "Warning: Source buildroot is empty or doesn't exist"
 fi
 
-# Copy spec file
+# Copy spec file and source tarball
 cp "$SPEC_FILE" "$WORK_DIR/rpmbuild/SPECS/"
+cp "$TARBALL_PATH" "$WORK_DIR/rpmbuild/SOURCES/"
 
 echo "Contents of isolated buildroot:"
 find "$ISOLATED_BUILDROOT" -type f -exec file {} \;
 
-echo "Building RPM package..."
+echo "Building binary RPM package..."
 rpmbuild \
   --define "_topdir $WORK_DIR/rpmbuild" \
   --define "_tmppath $WORK_DIR/tmp" \
@@ -49,8 +54,16 @@ rpmbuild \
   -bb \
   "$WORK_DIR/rpmbuild/SPECS/{SPEC_BASENAME}"
 
-echo "RPM build completed. Looking for generated RPM files:"
+echo "Building source RPM package..."
+rpmbuild \
+  --define "_topdir $WORK_DIR/rpmbuild" \
+  --define "_tmppath $WORK_DIR/tmp" \
+  -bs \
+  "$WORK_DIR/rpmbuild/SPECS/{SPEC_BASENAME}"
+
+echo "RPM build completed. Looking for generated files:"
 find "$WORK_DIR/rpmbuild/RPMS" -name '*.rpm' -ls
+find "$WORK_DIR/rpmbuild/SRPMS" -name '*.rpm' -ls
 
 # Copy the resulting RPM
 RPM_FOUND=$(find "$WORK_DIR/rpmbuild/RPMS" -name '*.rpm' | head -1)
@@ -62,7 +75,19 @@ else
     exit 1
 fi
 
+# Copy the resulting SRPM
+SRPM_FOUND=$(find "$WORK_DIR/rpmbuild/SRPMS" -name '*.rpm' | head -1)
+if [ -n "$SRPM_FOUND" ]; then
+    echo "Copying $SRPM_FOUND to $SRPM_OUTPUT"
+    cp "$SRPM_FOUND" "$SRPM_OUTPUT"
+else
+    echo "ERROR: No SRPM file found!"
+    exit 1
+fi
+
 # Cleanup
 rm -rf "$WORK_DIR"
 
-echo "RPM build successful: $RPM_OUTPUT"
+echo "Build successful:"
+echo "  RPM: $RPM_OUTPUT"
+echo "  SRPM: $SRPM_OUTPUT"

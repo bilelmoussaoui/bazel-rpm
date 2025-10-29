@@ -13,22 +13,34 @@ def _rpm_package_impl(ctx):
         ctx.attr.release,
         ctx.attr.architecture,
     )
+    srpm_filename = "{}-{}-{}.src.rpm".format(
+        package_name,
+        ctx.attr.version,
+        ctx.attr.release,
+    )
+    tarball_filename = "{}-{}.tar.gz".format(
+        package_name,
+        ctx.attr.version,
+    )
+
     rpm_file = ctx.actions.declare_file(rpm_filename)
+    srpm_file = ctx.actions.declare_file(srpm_filename)
+    tarball = ctx.actions.declare_file(tarball_filename)
     spec_file = ctx.actions.declare_file("{}.spec".format(ctx.label.name))
     buildroot = ctx.actions.declare_directory("{}_buildroot".format(ctx.label.name))
 
     # Generate spec file
-    _generate_spec_file(ctx, spec_file)
+    _generate_spec_file(ctx, spec_file, tarball_filename)
 
-    # Stage files in buildroot
-    _stage_files(ctx, buildroot)
+    # Stage files in buildroot and create tarball
+    _stage_files(ctx, buildroot, tarball)
 
-    # Build RPM
-    _build_rpm(ctx, spec_file, buildroot, rpm_file)
+    # Build RPM and SRPM
+    _build_rpm(ctx, spec_file, buildroot, tarball, rpm_file, srpm_file)
 
-    return [DefaultInfo(files = depset([rpm_file]))]
+    return [DefaultInfo(files = depset([rpm_file, srpm_file, tarball]))]
 
-def _generate_spec_file(ctx, spec_file):
+def _generate_spec_file(ctx, spec_file, tarball_filename):
     """Generate RPM spec file."""
 
     # Generate requires section
@@ -50,6 +62,7 @@ Group: {group}
 {vendor}
 Packager: {packager}
 {url}
+Source0: {source}
 BuildArch: {arch}
 {requires}
 
@@ -73,6 +86,7 @@ BuildArch: {arch}
         vendor = vendor_line,
         packager = ctx.attr.packager,
         url = url_line,
+        source = tarball_filename,
         arch = ctx.attr.architecture,
         requires = requires_section,
         description = ctx.attr.description or "Package built with Bazel rules_rpm",
@@ -213,8 +227,8 @@ fi""".format(
         "generated_files": [consolidated_script],
     }
 
-def _stage_files(ctx, buildroot):
-    """Stage files in buildroot directory using templates."""
+def _stage_files(ctx, buildroot, tarball):
+    """Stage files in buildroot directory and create source tarball."""
 
     # Create a tar archive with all the files we want to package
     staging_tar = ctx.actions.declare_file("{}_staging.tar".format(ctx.label.name))
@@ -230,6 +244,7 @@ def _stage_files(ctx, buildroot):
         output = staging_script,
         substitutions = {
             "{STAGE_DATA}": "source {}".format(copy_scripts["copy_script"]),
+            "{TARBALL_OUTPUT}": tarball.path,
         },
         is_executable = True,
     )
@@ -237,18 +252,18 @@ def _stage_files(ctx, buildroot):
     # Collect all headers for inputs
     all_headers = _collect_cc_headers(ctx)
 
-    # Run staging script to create tar and extract to buildroot
+    # Run staging script to create tar, tarball, and extract to buildroot
     ctx.actions.run(
         inputs = ctx.files.binaries + ctx.files.libraries + all_headers + ctx.files.configs + ctx.files.data + all_script_files,
-        outputs = [staging_tar, buildroot],
+        outputs = [staging_tar, buildroot, tarball],
         executable = staging_script,
         arguments = [staging_tar.path, buildroot.path],
         mnemonic = "RpmStageFiles",
         progress_message = "Staging files for RPM %s" % ctx.label.name,
     )
 
-def _build_rpm(ctx, spec_file, buildroot, rpm_file):
-    """Build the RPM package using isolated /tmp directory."""
+def _build_rpm(ctx, spec_file, buildroot, tarball, rpm_file, srpm_file):
+    """Build the RPM and SRPM packages using isolated /tmp directory."""
 
     # Generate build script from template
     build_script = ctx.actions.declare_file("{}_build.sh".format(ctx.label.name))
@@ -258,7 +273,9 @@ def _build_rpm(ctx, spec_file, buildroot, rpm_file):
         substitutions = {
             "{SPEC_FILE}": spec_file.path,
             "{BUILDROOT_PATH}": buildroot.path,
+            "{TARBALL_PATH}": tarball.path,
             "{RPM_OUTPUT}": rpm_file.path,
+            "{SRPM_OUTPUT}": srpm_file.path,
             "{SPEC_BASENAME}": spec_file.basename,
         },
         is_executable = True,
@@ -266,11 +283,11 @@ def _build_rpm(ctx, spec_file, buildroot, rpm_file):
 
     # Run the build script
     ctx.actions.run(
-        inputs = [spec_file, buildroot],
-        outputs = [rpm_file],
+        inputs = [spec_file, buildroot, tarball],
+        outputs = [rpm_file, srpm_file],
         executable = build_script,
         mnemonic = "RpmBuild",
-        progress_message = "Building RPM %s" % ctx.label.name,
+        progress_message = "Building RPM and SRPM %s" % ctx.label.name,
     )
 
 rpm_package = rule(
