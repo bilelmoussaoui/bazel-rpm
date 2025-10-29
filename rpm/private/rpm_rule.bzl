@@ -26,22 +26,23 @@ def _rpm_package_impl(ctx):
     rpm_file = ctx.actions.declare_file(rpm_filename)
     srpm_file = ctx.actions.declare_file(srpm_filename)
     tarball = ctx.actions.declare_file(tarball_filename)
+    tarball_sha256 = ctx.actions.declare_file("{}.sha256".format(tarball_filename))
     spec_file = ctx.actions.declare_file("{}.spec".format(ctx.label.name))
     buildroot = ctx.actions.declare_directory("{}_buildroot".format(ctx.label.name))
 
-    # Generate spec file
-    _generate_spec_file(ctx, spec_file, tarball_filename)
-
     # Stage files in buildroot and create tarball
-    _stage_files(ctx, buildroot, tarball)
+    _stage_files(ctx, buildroot, tarball, tarball_sha256)
+
+    # Generate spec file with tarball checksum
+    _generate_spec_file(ctx, spec_file, tarball_filename, tarball_sha256)
 
     # Build RPM and SRPM
     _build_rpm(ctx, spec_file, buildroot, tarball, rpm_file, srpm_file)
 
-    return [DefaultInfo(files = depset([rpm_file, srpm_file, tarball]))]
+    return [DefaultInfo(files = depset([rpm_file, srpm_file, tarball, tarball_sha256]))]
 
-def _generate_spec_file(ctx, spec_file, tarball_filename):
-    """Generate RPM spec file."""
+def _generate_spec_file(ctx, spec_file, tarball_filename, tarball_sha256):
+    """Generate RPM spec file with source tarball checksum."""
 
     # Generate requires section
     requires_section = ""
@@ -52,8 +53,8 @@ def _generate_spec_file(ctx, spec_file, tarball_filename):
     vendor_line = "Vendor: {}".format(ctx.attr.vendor) if ctx.attr.vendor else ""
     url_line = "URL: {}".format(ctx.attr.url) if ctx.attr.url else ""
 
-    # Basic spec file template
-    spec_content = """Name: {name}
+    # Basic spec file template with checksum placeholder
+    spec_template = """Name: {name}
 Version: {version}
 Release: {release}
 Summary: {summary}
@@ -63,6 +64,7 @@ Group: {group}
 Packager: {packager}
 {url}
 Source0: {source}
+# SHA256 checksum: SHA256SUM_PLACEHOLDER
 BuildArch: {arch}
 {requires}
 
@@ -93,9 +95,32 @@ BuildArch: {arch}
         files_list = _generate_files_list(ctx),
     )
 
+    # Write template to temporary file
+    spec_template_file = ctx.actions.declare_file("{}.spec.template".format(ctx.label.name))
     ctx.actions.write(
-        output = spec_file,
-        content = spec_content,
+        output = spec_template_file,
+        content = spec_template,
+    )
+
+    # Generate spec file with checksum using a script
+    inject_script = ctx.actions.declare_file("{}_inject_checksum.sh".format(ctx.label.name))
+    ctx.actions.write(
+        output = inject_script,
+        content = """#!/bin/bash
+set -e
+CHECKSUM=$(cat "$1" | awk '{print $1}')
+sed "s/SHA256SUM_PLACEHOLDER/$CHECKSUM/" "$2" > "$3"
+""",
+        is_executable = True,
+    )
+
+    ctx.actions.run(
+        inputs = [tarball_sha256, spec_template_file],
+        outputs = [spec_file],
+        executable = inject_script,
+        arguments = [tarball_sha256.path, spec_template_file.path, spec_file.path],
+        mnemonic = "GenerateSpecFile",
+        progress_message = "Generating spec file with checksum for %s" % ctx.label.name,
     )
 
 def _collect_transitive_headers(ctx):
@@ -218,8 +243,8 @@ fi""".format(
         "script_content": "\n\n".join(copy_sections),
     }
 
-def _stage_files(ctx, buildroot, tarball):
-    """Stage files in buildroot directory and create source tarball."""
+def _stage_files(ctx, buildroot, tarball, tarball_sha256):
+    """Stage files in buildroot directory and create source tarball with checksum."""
 
     # Declare staging script (will be cleaned up)
     staging_script = ctx.actions.declare_file("{}_stage.sh".format(ctx.label.name))
@@ -234,6 +259,7 @@ def _stage_files(ctx, buildroot, tarball):
         substitutions = {
             "{STAGE_DATA}": copy_scripts["script_content"],
             "{TARBALL_OUTPUT}": tarball.path,
+            "{SHA256_OUTPUT}": tarball_sha256.path,
         },
         is_executable = True,
     )
@@ -241,10 +267,10 @@ def _stage_files(ctx, buildroot, tarball):
     # Collect all headers for inputs
     all_headers = _collect_cc_headers(ctx)
 
-    # Run staging script to create tarball and buildroot
+    # Run staging script to create tarball, checksum, and buildroot
     ctx.actions.run(
         inputs = ctx.files.binaries + ctx.files.libraries + all_headers + ctx.files.configs + ctx.files.data,
-        outputs = [buildroot, tarball],
+        outputs = [buildroot, tarball, tarball_sha256],
         executable = staging_script,
         arguments = [buildroot.path],
         mnemonic = "RpmStageFiles",

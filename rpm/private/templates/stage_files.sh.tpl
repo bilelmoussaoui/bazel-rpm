@@ -4,9 +4,11 @@ set -x
 
 BUILDROOT=$(cd $(dirname $1) && pwd)/$(basename $1)
 TARBALL_OUTPUT=$(cd $(dirname {TARBALL_OUTPUT}) && pwd)/$(basename {TARBALL_OUTPUT})
+SHA256_OUTPUT=$(cd $(dirname {SHA256_OUTPUT}) && pwd)/$(basename {SHA256_OUTPUT})
 
 echo "Target buildroot: $BUILDROOT"
 echo "Source tarball: $TARBALL_OUTPUT"
+echo "SHA256 output: $SHA256_OUTPUT"
 
 # Create a temporary directory for staging
 TEMP_STAGE=$(mktemp -d)
@@ -17,6 +19,11 @@ echo "Using temporary staging directory: $TEMP_STAGE"
 echo "Creating compressed source tarball..."
 cd "$TEMP_STAGE"
 tar -czf "$TARBALL_OUTPUT" .
+
+echo "Computing SHA256 checksum..."
+TARBALL_BASENAME=$(basename "$TARBALL_OUTPUT")
+sha256sum "$TARBALL_OUTPUT" | sed "s|$TARBALL_OUTPUT|$TARBALL_BASENAME|" > "$SHA256_OUTPUT"
+echo "SHA256: $(cat $SHA256_OUTPUT)"
 
 echo "Extracting to buildroot..."
 mkdir -p "$BUILDROOT"
