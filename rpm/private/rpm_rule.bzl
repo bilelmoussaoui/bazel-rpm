@@ -370,32 +370,8 @@ rpm_package = rule(
             default = "",
             doc = "Project homepage URL (optional)",
         ),
-        "_copy_file_template": attr.label(
-            default = "//rpm/private/templates:copy_file.sh.tpl",
-            allow_single_file = True,
-        ),
         "_stage_files_template": attr.label(
             default = "//rpm/private/templates:stage_files.sh.tpl",
-            allow_single_file = True,
-        ),
-        "_stage_binaries_template": attr.label(
-            default = "//rpm/private/templates:stage_binaries.sh.tpl",
-            allow_single_file = True,
-        ),
-        "_stage_libraries_template": attr.label(
-            default = "//rpm/private/templates:stage_libraries.sh.tpl",
-            allow_single_file = True,
-        ),
-        "_stage_headers_template": attr.label(
-            default = "//rpm/private/templates:stage_headers.sh.tpl",
-            allow_single_file = True,
-        ),
-        "_stage_configs_template": attr.label(
-            default = "//rpm/private/templates:stage_configs.sh.tpl",
-            allow_single_file = True,
-        ),
-        "_stage_data_template": attr.label(
-            default = "//rpm/private/templates:stage_data.sh.tpl",
             allow_single_file = True,
         ),
         "_build_rpm_template": attr.label(
