@@ -2,11 +2,9 @@
 set -e
 set -x
 
-STAGING_TAR=$(cd $(dirname $1) && pwd)/$(basename $1)
-BUILDROOT=$(cd $(dirname $2) && pwd)/$(basename $2)
+BUILDROOT=$(cd $(dirname $1) && pwd)/$(basename $1)
 TARBALL_OUTPUT=$(cd $(dirname {TARBALL_OUTPUT}) && pwd)/$(basename {TARBALL_OUTPUT})
 
-echo "Creating staging tar: $STAGING_TAR"
 echo "Target buildroot: $BUILDROOT"
 echo "Source tarball: $TARBALL_OUTPUT"
 
@@ -16,17 +14,13 @@ echo "Using temporary staging directory: $TEMP_STAGE"
 
 {STAGE_DATA}
 
-echo "Creating tar archive from staged files..."
-cd "$TEMP_STAGE"
-tar -cf "$STAGING_TAR" .
-
 echo "Creating compressed source tarball..."
+cd "$TEMP_STAGE"
 tar -czf "$TARBALL_OUTPUT" .
 
-echo "Extracting tar to buildroot..."
+echo "Extracting to buildroot..."
 mkdir -p "$BUILDROOT"
-cd "$BUILDROOT"
-tar -xf "$STAGING_TAR"
+cp -r * "$BUILDROOT/"
 
 echo "Cleaning up temporary staging directory"
 rm -rf "$TEMP_STAGE"

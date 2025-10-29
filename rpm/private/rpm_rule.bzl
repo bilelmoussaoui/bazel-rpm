@@ -213,37 +213,26 @@ fi""".format(
     copy_sections.append(_generate_copy_section(ctx.files.configs, ctx.attr.config_dir, "config"))
     copy_sections.append(_generate_copy_section(ctx.files.data, ctx.attr.data_dir, "data"))
 
-    # Create single consolidated script
-    consolidated_script = ctx.actions.declare_file("{}_copy_all_files.sh".format(ctx.label.name))
-    script_content = "\n\n".join(copy_sections)
-
-    ctx.actions.write(
-        output = consolidated_script,
-        content = script_content,
-    )
-
+    # Return script content directly
     return {
-        "copy_script": consolidated_script.path,
-        "generated_files": [consolidated_script],
+        "script_content": "\n\n".join(copy_sections),
     }
 
 def _stage_files(ctx, buildroot, tarball):
     """Stage files in buildroot directory and create source tarball."""
 
-    # Create a tar archive with all the files we want to package
-    staging_tar = ctx.actions.declare_file("{}_staging.tar".format(ctx.label.name))
+    # Declare staging script (will be cleaned up)
     staging_script = ctx.actions.declare_file("{}_stage.sh".format(ctx.label.name))
 
-    # Generate single consolidated copy script
+    # Generate single consolidated copy script content
     copy_scripts = _generate_file_copy_scripts(ctx)
-    all_script_files = copy_scripts["generated_files"]
 
     # Generate main staging script using the consolidated copy script
     ctx.actions.expand_template(
         template = ctx.file._stage_files_template,
         output = staging_script,
         substitutions = {
-            "{STAGE_DATA}": "source {}".format(copy_scripts["copy_script"]),
+            "{STAGE_DATA}": copy_scripts["script_content"],
             "{TARBALL_OUTPUT}": tarball.path,
         },
         is_executable = True,
@@ -252,12 +241,12 @@ def _stage_files(ctx, buildroot, tarball):
     # Collect all headers for inputs
     all_headers = _collect_cc_headers(ctx)
 
-    # Run staging script to create tar, tarball, and extract to buildroot
+    # Run staging script to create tarball and buildroot
     ctx.actions.run(
-        inputs = ctx.files.binaries + ctx.files.libraries + all_headers + ctx.files.configs + ctx.files.data + all_script_files,
-        outputs = [staging_tar, buildroot, tarball],
+        inputs = ctx.files.binaries + ctx.files.libraries + all_headers + ctx.files.configs + ctx.files.data,
+        outputs = [buildroot, tarball],
         executable = staging_script,
-        arguments = [staging_tar.path, buildroot.path],
+        arguments = [buildroot.path],
         mnemonic = "RpmStageFiles",
         progress_message = "Staging files for RPM %s" % ctx.label.name,
     )
@@ -265,7 +254,7 @@ def _stage_files(ctx, buildroot, tarball):
 def _build_rpm(ctx, spec_file, buildroot, tarball, rpm_file, srpm_file):
     """Build the RPM and SRPM packages using isolated /tmp directory."""
 
-    # Generate build script from template
+    # Generate build script from template (will be cleaned up)
     build_script = ctx.actions.declare_file("{}_build.sh".format(ctx.label.name))
     ctx.actions.expand_template(
         template = ctx.file._build_rpm_template,
